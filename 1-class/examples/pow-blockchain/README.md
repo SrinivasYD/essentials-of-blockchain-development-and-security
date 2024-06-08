@@ -83,14 +83,16 @@ This project implements a basic proof of work (PoW) blockchain in Node.js. The b
 - `testBlockchain.js`: Script to test the blockchain functionality.
 - `README.md`: Documentation file.
 
-### Example Output after executing 'node testBlockchain.js' command
+### Example Output
 
+```plaintext
 Block mined in 0.115 seconds
 Average hash rate: 94895.65217391304 hashes per second
 Block mined in 0.031 seconds
 Average hash rate: 95064.51612903226 hashes per second
 Block mined in 0.025 seconds
 Average hash rate: 81200 hashes per second
+
 Creating transactions...
 Mining block...
 Block mined in 0.149 seconds
@@ -115,202 +117,205 @@ Block mined in 0.055 seconds
 Average hash rate: 126054.54545454546 hashes per second
 Block mined in 0.896 seconds
 Average hash rate: 144213.16964285713 hashes per second
+
 Checking difficulty adjustment...
 Current difficulty: 4
 Checking hash rate calculation...
 Block mined in 0.34 seconds
 Average hash rate: 138355.88235294117 hashes per second
+
 Final blockchain:
 Blockchain {
-chain: [
-Block {
-index: 0,
-timestamp: 1717840207,
-transactions: [],
-prevHash: '0',
-hash: '3a17d38f56ca57a0af46641df698103964e32832fafb27419a19232fe42e64a6',
-nonce: '0'
-},
-Block {
-index: 1,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 10,
-sender: 'Alice',
-recipient: 'Bob',
-tx_id: '8d2e3f24,fbf2,4106,aa47,54c66d16dbac'
-},
-Transaction {
-amount: 20,
-sender: 'Bob',
-recipient: 'Charlie',
-tx_id: '65517ed9,9fba,4203,b51c,0bc93fa991a9'
-},
-Transaction {
-amount: 30,
-sender: 'Charlie',
-recipient: 'Dave',
-tx_id: '5892a371,5876,42a1,8a27,5f755097f6f6'
-}
-],
-prevHash: '3a17d38f56ca57a0af46641df698103964e32832fafb27419a19232fe42e64a6',
-hash: '0005cfaedf2fa8ac6d529c7e613d51b1ded3f8bfcb844c89ddbeff5c79f328c0',
-nonce: 14052
-},
-Block {
-index: 2,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 69.33215385991427,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: 'a3602d37,000e,4287,a5f6,269f67188940'
-}
-],
-prevHash: '0005cfaedf2fa8ac6d529c7e613d51b1ded3f8bfcb844c89ddbeff5c79f328c0',
-hash: '000cc87b47b44d9f6466c2aae5015c0625587b8d116afbfbf22c48445ffe0a43',
-nonce: 2302
-},
-Block {
-index: 3,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 97.78988926664742,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: 'fa2cafed,695c,45fe,a15a,760d3c59aef6'
-}
-],
-prevHash: '000cc87b47b44d9f6466c2aae5015c0625587b8d116afbfbf22c48445ffe0a43',
-hash: '000fd3dee6aaec8b0edf2a22dd815924824fc81e2dce8598ded441a711d10fb3',
-nonce: 4675
-},
-Block {
-index: 4,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 84.34898391220096,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: '0b9151a1,d589,41a2,bc5f,dcdb5d85f93c'
-}
-],
-prevHash: '000fd3dee6aaec8b0edf2a22dd815924824fc81e2dce8598ded441a711d10fb3',
-hash: '000a9374a77644a619c4945bf4feecfdbc1be25d1b2a8e82a117ca00a212456c',
-nonce: 3519
-},
-Block {
-index: 5,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 43.16201525650287,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: '5cd091ed,c461,4d04,9960,51de91c2953d'
-}
-],
-prevHash: '000a9374a77644a619c4945bf4feecfdbc1be25d1b2a8e82a117ca00a212456c',
-hash: '000fb8a7d68ef68a5df38fe5037275c34628434b0e78a29576532fbc74e3a63d',
-nonce: 3494
-},
-Block {
-index: 6,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 29.76508092302801,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: '9308886d,66a4,40e2,aa5a,785ea3565236'
-}
-],
-prevHash: '000fb8a7d68ef68a5df38fe5037275c34628434b0e78a29576532fbc74e3a63d',
-hash: '000006878ee6b974c6ad11078e377a2c6eac9ea8fede796287c717aa16d1396b',
-nonce: 1071
-},
-Block {
-index: 7,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 87.34576692050213,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: '105a497f,b7c2,4388,86f0,59301c58a552'
-}
-],
-prevHash: '000006878ee6b974c6ad11078e377a2c6eac9ea8fede796287c717aa16d1396b',
-hash: '000b0bedd9061b3ed294b4942afb459eaf00a1f897b6f17d3de6889fbefef8be',
-nonce: 2129
-},
-Block {
-index: 8,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 13.019188632498357,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: 'ced415ec,bca4,4f30,886f,171b5a2284ba'
-}
-],
-prevHash: '000b0bedd9061b3ed294b4942afb459eaf00a1f897b6f17d3de6889fbefef8be',
-hash: '000235d64a8a519ae6cc5345061ec1ca87d3f2a5dcfa3c271e6a220f22437286',
-nonce: 772
-},
-Block {
-index: 9,
-timestamp: 1717840207,
-transactions: [
-Transaction {
-amount: 65.32793463912103,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: '995af4d2,3109,407d,bcc0,2fd574267d35'
-}
-],
-prevHash: '000235d64a8a519ae6cc5345061ec1ca87d3f2a5dcfa3c271e6a220f22437286',
-hash: '000be81975b6bff99924f914dc32265fcdf5986426bc7b333cb201265938cce8',
-nonce: 6932
-},
-Block {
-index: 10,
-timestamp: 1717840208,
-transactions: [
-Transaction {
-amount: 42.922185898380214,
-sender: 'UserA',
-recipient: 'UserB',
-tx_id: 'a9a41dda,995c,4c92,9d0d,fa12daa9754d'
-}
-],
-prevHash: '000be81975b6bff99924f914dc32265fcdf5986426bc7b333cb201265938cce8',
-hash: '0000911c501390212f2303d168a594532a51a48d7baa4f1ff139386164c9d0f5',
-nonce: 129214
-},
-Block {
-index: 11,
-timestamp: 1717840209,
-transactions: [
-Transaction {
-amount: 50,
-sender: 'Eve',
-recipient: 'Frank',
-tx_id: '1464c82c,4a05,4485,900a,beec3482a120'
-}
-],
-prevHash: '0000911c501390212f2303d168a594532a51a48d7baa4f1ff139386164c9d0f5',
-hash: '0000a4471c6cb56ff187fc86931c01cc9fbd0af3a2fb44c79618bebf45913ff2',
-nonce: 47040
-}
-],
-pendingTransactions: [],
-difficulty: 4
+  chain: [
+    Block {
+      index: 0,
+      timestamp: 1717840207,
+      transactions: [],
+      prevHash: '0',
+      hash: '3a17d38f56ca57a0af46641df698103964e32832fafb27419a19232fe42e64a6',
+      nonce: '0'
+    },
+    Block {
+      index: 1,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 10,
+          sender: 'Alice',
+          recipient: 'Bob',
+          tx_id: '8d2e3f24,fbf2,4106,aa47,54c66d16dbac'
+        },
+        Transaction {
+          amount: 20,
+          sender: 'Bob',
+          recipient: 'Charlie',
+          tx_id: '65517ed9,9fba,4203,b51c,0bc93fa991a9'
+        },
+        Transaction {
+          amount: 30,
+          sender: 'Charlie',
+          recipient: 'Dave',
+          tx_id: '5892a371,5876,42a1,8a27,5f755097f6f6'
+        }
+      ],
+      prevHash: '3a17d38f56ca57a0af46641df698103964e32832fafb27419a19232fe42e64a6',
+      hash: '0005cfaedf2fa8ac6d529c7e613d51b1ded3f8bfcb844c89ddbeff5c79f328c0',
+      nonce: 14052
+    },
+    Block {
+      index: 2,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 69.33215385991427,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: 'a3602d37,000e,4287,a5f6,269f67188940'
+        }
+      ],
+      prevHash: '0005cfaedf2fa8ac6d529c7e613d51b1ded3f8bfcb844c89ddbeff5c79f328c0',
+      hash: '000cc87b47b44d9f6466c2aae5015c0625587b8d116afbfbf22c48445ffe0a43',
+      nonce: 2302
+    },
+    Block {
+      index: 3,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 97.78988926664742,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: 'fa2cafed,695c,45fe,a15a,760d3c59aef6'
+        }
+      ],
+      prevHash: '000cc87b47b44d9f6466c2aae5015c0625587b8d116afbfbf22c48445ffe0a43',
+      hash: '000fd3dee6aaec8b0edf2a22dd815924824fc81e2dce8598ded441a711d10fb3',
+      nonce: 4675
+    },
+    Block {
+      index: 4,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 84.34898391220096,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: '0b9151a1,d589,41a2,bc5f,dcdb5d85f93c'
+        }
+      ],
+      prevHash: '000fd3dee6aaec8b0edf2a22dd815924824fc81e2dce8598ded441a711d10fb3',
+      hash: '000a9374a77644a619c4945bf4feecfdbc1be25d1b2a8e82a117ca00a212456c',
+      nonce: 3519
+    },
+    Block {
+      index: 5,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 43.16201525650287,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: '5cd091ed,c461,4d04,9960,51de91c2953d'
+        }
+      ],
+      prevHash: '000a9374a77644a619c4945bf4feecfdbc1be25d1b2a8e82a117ca00a212456c',
+      hash: '000fb8a7d68ef68a5df38fe5037275c34628434b0e78a29576532fbc74e3a63d',
+      nonce: 3494
+    },
+    Block {
+      index: 6,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 29.76508092302801,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: '9308886d,66a4,40e2,aa5a,785ea3565236'
+        }
+      ],
+      prevHash: '000fb8a7d68ef68a5df38fe5037275c34628434b0e78a29576532fbc74e3a63d',
+      hash: '000006878ee6b974c6ad11078e377a2c6eac9ea8fede796287c717aa16d1396b',
+      nonce: 1071
+    },
+    Block {
+      index: 7,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 87.34576692050213,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: '105a497f,b7c2,4388,86f0,59301c58a552'
+        }
+      ],
+      prevHash: '000006878ee6b974c6ad11078e377a2c6eac9ea8fede796287c717aa16d1396b',
+      hash: '000b0bedd9061b3ed294b4942afb459eaf00a1f897b6f17d3de6889fbefef8be',
+      nonce: 2129
+    },
+    Block {
+      index: 8,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 13.019188632498357,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: 'ced415ec,bca4,4f30,886f,171b5a2284ba'
+        }
+      ],
+      prevHash: '000b0bedd9061b3ed294b4942afb459eaf00a1f897b6f17d3de6889fbefef8be',
+      hash: '000235d64a8a519ae6cc5345061ec1ca87d3f2a5dcfa3c271e6a220f22437286',
+      nonce: 772
+    },
+    Block {
+      index: 9,
+      timestamp: 1717840207,
+      transactions: [
+        Transaction {
+          amount: 65.32793463912103,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: '995af4d2,3109,407d,bcc0,2fd574267d35'
+        }
+      ],
+      prevHash: '000235d64a8a519ae6cc5345061ec1ca87d3f2a5dcfa3c271e6a220f22437286',
+      hash: '000be81975b6bff99924f914dc32265fcdf5986426bc7b333cb201265938cce8',
+      nonce: 6932
+    },
+    Block {
+      index: 10,
+      timestamp: 1717840208,
+      transactions: [
+        Transaction {
+          amount: 42.922185898380214,
+          sender: 'UserA',
+          recipient: 'UserB',
+          tx_id: 'a9a41dda,995c,4c92,9d0d,fa12daa9754d'
+        }
+      ],
+      prevHash: '000be81975b6bff99924f914dc32265fcdf5986426bc7b333cb201265938cce8',
+      hash: '0000911c501390212f2303d168a594532a51a48d7baa4f1ff139386164c9d0f5',
+      nonce: 129214
+    },
+    Block {
+      index: 11,
+      timestamp: 1717840209,
+      transactions: [
+        Transaction {
+          amount: 50,
+          sender: 'Eve',
+          recipient: 'Frank',
+          tx_id: '1464c82c,4a05,4485,900a,beec3482a120'
+        }
+      ],
+      prevHash: '0000911c501390212f2303d168a594532a51a48d7baa4f1ff139386164c9d0f5',
+      hash: '0000a4471c6cb56ff187fc86931c01cc9fbd0af3a2fb44c79618bebf45913ff2',
+      nonce: 47040
+    }
+  ],
+  pendingTransactions: [],
+  difficulty: 4
 }
 Validating blockchain...
 Blockchain is valid: true
+```
