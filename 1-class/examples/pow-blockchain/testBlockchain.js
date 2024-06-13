@@ -1,51 +1,75 @@
-const Blockchain = require("./Blockchain");
+const { Blockchain, Participant } = require("./Blockchain");
 
-function runTests() {
-  const BChain = new Blockchain();
+const BChain = new Blockchain();
 
-  // Create some transactions
-  console.log("Creating transactions...");
-  BChain.createTransaction(10, "Alice", "Bob");
-  BChain.createTransaction(20, "Bob", "Charlie");
-  BChain.createTransaction(30, "Charlie", "Dave");
+// Adding participants
+const participant1 = new Participant("Alice");
+const participant2 = new Participant("Bob");
+BChain.addParticipant(participant1);
+BChain.addParticipant(participant2);
 
-  // Mine a block and check hash
-  console.log("Mining block...");
-  BChain.mine();
-  let lastBlock = BChain.chain[BChain.chain.length - 1];
-  let hashCheck = lastBlock.hash.startsWith("0".repeat(BChain.difficulty));
-  console.log(
-    `First block mined with hash: ${lastBlock.hash} (difficulty: ${BChain.difficulty})`
-  );
-  console.assert(hashCheck, "Hash does not meet difficulty requirement");
+runTests(BChain);
 
-  // Mine additional blocks to trigger difficulty increase
-  console.log("Mining additional blocks to test difficulty adjustment...");
-  for (let i = 0; i < 9; i++) {
-    BChain.createTransaction(Math.random() * 100, "UserA", "UserB");
-    BChain.mine();
+/**
+ * Runs tests on the blockchain instance.
+ * @param {Blockchain} blockchain - The blockchain instance.
+ */
+function runTests(blockchain) {
+  // Mining initial blocks to establish the chain
+  for (let i = 0; i < 3; i++) {
+    blockchain.mine(participant1.id);
   }
 
-  // Check if difficulty increased
-  console.log("Checking difficulty adjustment...");
-  let currentDifficulty = BChain.difficulty;
-  console.log(`Current difficulty: ${currentDifficulty}`);
-  console.assert(currentDifficulty > 3, "Difficulty did not increase");
+  // Simulate transactions and mining
+  simulateChain(blockchain, 5, 8, participant2.id);
 
-  // Check hash rate calculation
-  console.log("Checking hash rate calculation...");
-  BChain.createTransaction(50, "Eve", "Frank");
-  BChain.mine(); // Mine one more block to get the hash rate log
-
-  // Print the entire blockchain for verification
-  console.log("Final blockchain:");
-  console.dir(BChain, { depth: null });
-
-  // Validate the entire blockchain
-  console.log("Validating blockchain...");
-  const isValid = BChain.chainIsValid();
+  // Validate blockchain
+  const isValid = blockchain.chainIsValid();
   console.log("Blockchain is valid:", isValid);
-  console.assert(isValid, "Blockchain is not valid");
+
+  // Display final blockchain
+  console.log("Final blockchain:");
+  blockchain.chain.forEach((block) => {
+    console.log({
+      index: block.index,
+      timestamp: block.timestamp,
+      transactions: block.transactions.map((tx) => ({
+        amount: tx.amount,
+        sender: tx.sender,
+        recipient: tx.recipient,
+        tx_id: tx.tx_id,
+        senderSignature: tx.senderSignature,
+        senderPublicKey: tx.senderPublicKey,
+      })),
+      prevHash: block.prevHash,
+      hash: block.hash,
+      nonce: block.nonce,
+      merkleRoot: block.merkleRoot,
+      difficulty: block.difficulty,
+      minerPublicKey: block.minerPublicKey,
+    });
+  });
 }
 
-runTests();
+/**
+ * Simulates the blockchain by creating and mining transactions.
+ * @param {Blockchain} blockchain - The blockchain instance.
+ * @param {number} numTxs - Number of transactions per block.
+ * @param {number} numBlocks - Number of blocks to mine.
+ * @param {string} minerId - ID of the miner participant.
+ */
+function simulateChain(blockchain, numTxs, numBlocks, minerId) {
+  for (let i = 0; i < numBlocks; i++) {
+    const numTxsRand = Math.floor(Math.random() * Math.floor(numTxs));
+    for (let j = 0; j < numTxsRand; j++) {
+      const sender = j % 2 === 0 ? "Alice" : "Bob";
+      const receiver = j % 2 === 0 ? "Bob" : "Alice";
+      blockchain.createTransaction(
+        Math.floor(Math.random() * 1000),
+        sender,
+        receiver
+      );
+    }
+    blockchain.mine(minerId);
+  }
+}

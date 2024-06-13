@@ -1,26 +1,62 @@
 const crypto = require("crypto");
 const { v4: uuidv4 } = require("uuid");
+const forge = require("node-forge");
+
+// Function to generate key pairs
+function generateKeyPair() {
+  return forge.pki.rsa.generateKeyPair(2048);
+}
+
+// Class to represent a participant with a key pair
+class Participant {
+  constructor(id) {
+    this.id = id;
+    const { publicKey, privateKey } = generateKeyPair();
+    this.publicKey = forge.pki.publicKeyToPem(publicKey);
+    this.privateKey = privateKey;
+  }
+
+  sign(data) {
+    const md = forge.md.sha256.create();
+    md.update(data, "utf8");
+    return forge.util.encode64(this.privateKey.sign(md));
+  }
+
+  verify(signature, data) {
+    const publicKey = forge.pki.publicKeyFromPem(this.publicKey);
+    const md = forge.md.sha256.create();
+    md.update(data, "utf8");
+    return publicKey.verify(
+      md.digest().bytes(),
+      forge.util.decode64(signature)
+    );
+  }
+}
 
 /**
  * Represents a block in the blockchain.
  * @class Block
  */
 class Block {
-  /**
-   * Creates an instance of Block.
-   * @param {number} index - Position of the block in the blockchain.
-   * @param {Array} transactions - List of transactions in the block.
-   * @param {string} prevHash - Hash of the previous block.
-   * @param {number} nonce - Nonce value for proof of work.
-   * @param {string} hash - Hash of the current block.
-   */
-  constructor(index, transactions, prevHash, nonce, hash) {
+  constructor(
+    index,
+    transactions,
+    prevHash,
+    nonce,
+    hash,
+    merkleRoot,
+    difficulty,
+    minerPublicKey
+  ) {
     this.index = index;
     this.timestamp = Math.floor(Date.now() / 1000);
     this.transactions = transactions;
     this.prevHash = prevHash;
     this.hash = hash;
     this.nonce = nonce;
+    this.merkleRoot = merkleRoot;
+    this.difficulty = difficulty;
+    this.minerPublicKey = minerPublicKey;
   }
 }
 
@@ -29,17 +65,13 @@ class Block {
  * @class Transaction
  */
 class Transaction {
-  /**
-   * Creates an instance of Transaction.
-   * @param {number} amount - Amount of the transaction.
-   * @param {string} sender - ID of the sender.
-   * @param {string} recipient - ID of the recipient.
-   */
-  constructor(amount, sender, recipient) {
+  constructor(amount, sender, recipient, senderSignature, senderPublicKey) {
     this.amount = amount;
     this.sender = sender;
     this.recipient = recipient;
-    this.tx_id = uuidv4().split("-").join();
+    this.tx_id = uuidv4().replace(/-/g, "");
+    this.senderSignature = senderSignature;
+    this.senderPublicKey = senderPublicKey;
   }
 }
 
@@ -48,191 +80,189 @@ class Transaction {
  * @class Blockchain
  */
 class Blockchain {
-  /**
-   * Creates an instance of Blockchain.
-   */
   constructor() {
     this.chain = [];
     this.pendingTransactions = [];
+    this.participants = {};
     this.difficulty = 3; // Initial difficulty level
-    this.addBlock("0");
+    this.addBlock("0", "genesis");
   }
 
-  /**
-   * Creates a new transaction and adds it to the list of pending transactions.
-   * @param {number} amount - Amount of the transaction.
-   * @param {string} sender - ID of the sender.
-   * @param {string} recipient - ID of the recipient.
-   */
-  createTransaction(amount, sender, recipient) {
-    this.pendingTransactions.push(new Transaction(amount, sender, recipient));
+  addParticipant(participant) {
+    this.participants[participant.id] = participant;
   }
 
-  /**
-   * Adds a block to the blockchain.
-   * @param {number} nonce - Nonce value found by the proof of work algorithm.
-   */
-  addBlock(nonce) {
-    const index = this.chain.length;
-    const prevHash =
-      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
-    const hash = this.getHash(prevHash, this.pendingTransactions, nonce);
-    const block = new Block(
-      index,
-      this.pendingTransactions,
-      prevHash,
-      nonce,
-      hash
-    );
-
-    // Reset pending transactions
-    this.pendingTransactions = [];
-    this.chain.push(block);
-
-    // Adjust difficulty if necessary
-    this.adjustDifficulty();
-  }
-
-  /**
-   * Adjusts the difficulty of the proof of work algorithm.
-   */
-  adjustDifficulty() {
-    if (this.chain.length % 10 === 0) {
-      // Increase difficulty every 10 blocks
-      this.difficulty++;
-    }
-  }
-
-  /**
-   * Computes the hash of a block.
-   * @param {string} prevHash - Hash of the previous block.
-   * @param {Array} txs - List of transactions in the block.
-   * @param {number} nonce - Nonce value.
-   * @returns {string} - Computed hash of the block.
-   */
-  getHash(prevHash, txs, nonce) {
-    let encrypt = prevHash + nonce;
-    txs.forEach((tx) => {
-      encrypt += tx.tx_id;
-    });
-    const hash = crypto
-      .createHmac("sha256", "secret")
-      .update(encrypt)
-      .digest("hex");
-    return hash;
-  }
-
-  /**
-   * Finds a nonce that satisfies the proof of work requirement.
-   * @param {string} prevHash - Hash of the previous block.
-   * @param {Array} transactions - List of transactions in the block.
-   * @param {number} difficulty - Difficulty level.
-   * @returns {number} - Nonce value that satisfies the proof of work.
-   */
-  proofOfWork(prevHash, transactions, difficulty) {
-    let nonce = 0;
-    let hash = this.getHash(prevHash, transactions, nonce);
-    const target = "0".repeat(difficulty); // Target hash must have leading zeros
-
-    while (!hash.startsWith(target)) {
-      nonce++;
-      hash = this.getHash(prevHash, transactions, nonce);
+  createTransaction(amount, senderId, recipientId) {
+    const sender = this.participants[senderId];
+    if (!sender) {
+      throw new Error("Sender does not exist");
     }
 
-    return nonce;
-  }
-
-  /**
-   * Mines a new block and adds it to the chain.
-   */
-  mine() {
-    const startTime = Date.now();
-    const prevHash =
-      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
-    const nonce = this.proofOfWork(
-      prevHash,
-      this.pendingTransactions,
-      this.difficulty
+    const transaction = new Transaction(
+      amount,
+      senderId,
+      recipientId,
+      sender.sign(amount + senderId + recipientId),
+      sender.publicKey
     );
-    this.addBlock(nonce);
-    const endTime = Date.now();
-
-    const timeTaken = (endTime - startTime) / 1000; // Time taken in seconds
-    console.log(`Block mined in ${timeTaken} seconds`);
-
-    // Compute the average hash rate (hashes per second)
-    const totalHashes = nonce + 1; // Since nonce starts at 0
-    const hashRate = totalHashes / timeTaken;
-    console.log(`Average hash rate: ${hashRate} hashes per second`);
+    if (!this.validateTransaction(transaction)) {
+      throw new TypeError(
+        "Invalid transaction: Transaction must have a valid tx_id and signature"
+      );
+    }
+    this.pendingTransactions.push(transaction);
   }
 
-  /**
-   * Validates the blockchain by ensuring the integrity of all blocks.
-   * @returns {boolean} - True if the blockchain is valid, false otherwise.
-   */
-  chainIsValid() {
-    for (let i = 0; i < this.chain.length; i++) {
-      const tx_id_list = [];
-      this.chain[i].transactions.forEach((tx) => tx_id_list.push(tx.tx_id));
+  validateTransaction(transaction) {
+    if (!transaction || typeof transaction.tx_id !== "string") {
+      return false;
+    }
+    const sender = this.participants[transaction.sender];
+    if (!sender) {
+      return false;
+    }
+    return sender.verify(
+      transaction.senderSignature,
+      transaction.amount + transaction.sender + transaction.recipient
+    );
+  }
 
-      if (i === 0 && this.chain[i].hash !== this.getHash("0", [], "0")) {
-        return false;
-      }
-      if (
-        i > 0 &&
-        this.chain[i].hash !==
-          this.getHash(
-            this.chain[i - 1].hash,
-            this.chain[i].transactions,
-            this.chain[i].nonce
-          )
-      ) {
-        return false;
-      }
-      if (i > 0 && this.chain[i].prevHash !== this.chain[i - 1].hash) {
+  validatePendingTransactions() {
+    for (const transaction of this.pendingTransactions) {
+      if (!this.validateTransaction(transaction)) {
         return false;
       }
     }
     return true;
   }
-}
 
-/**
- * Constructs a Merkle tree (placeholder function).
- * @param {Array} inputs - Array of inputs for the Merkle tree.
- */
-function constructMerkleTree(inputs) {
-  // TODO: Implement Merkle tree construction
-}
+  addBlock(nonce, minerPublicKey) {
+    const index = this.chain.length;
+    const prevHash =
+      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
+    const merkleRoot = this.constructMerkleRoot(this.pendingTransactions);
+    const hash = this.getHash(prevHash, merkleRoot, nonce);
+    const block = new Block(
+      index,
+      this.pendingTransactions,
+      prevHash,
+      nonce,
+      hash,
+      merkleRoot,
+      this.difficulty,
+      minerPublicKey
+    );
 
-/**
- * Simulates the blockchain by creating and mining transactions.
- * @param {Blockchain} blockchain - The blockchain instance.
- * @param {number} numTxs - Number of transactions per block.
- * @param {number} numBlocks - Number of blocks to mine.
- */
-function simulateChain(blockchain, numTxs, numBlocks) {
-  for (let i = 0; i < numBlocks; i++) {
-    const numTxsRand = Math.floor(Math.random() * Math.floor(numTxs));
-    for (let j = 0; j < numTxsRand; j++) {
-      const sender = uuidv4().substr(0, 5);
-      const receiver = uuidv4().substr(0, 5);
-      blockchain.createTransaction(
-        Math.floor(Math.random() * 1000),
-        sender,
-        receiver
-      );
+    this.pendingTransactions = [];
+    this.chain.push(block);
+
+    this.adjustDifficulty();
+  }
+
+  adjustDifficulty() {
+    if (this.chain.length % 10 === 0) {
+      this.difficulty++;
     }
-    blockchain.mine();
+  }
+
+  getHash(prevHash, merkleRoot, nonce) {
+    const encrypt = prevHash + merkleRoot + nonce;
+    return crypto.createHmac("sha256", "secret").update(encrypt).digest("hex");
+  }
+
+  proofOfWork(prevHash, merkleRoot, difficulty) {
+    let nonce = 0;
+    let hash = this.getHash(prevHash, merkleRoot, nonce);
+    const target = "0".repeat(difficulty);
+
+    while (!hash.startsWith(target)) {
+      nonce++;
+      hash = this.getHash(prevHash, merkleRoot, nonce);
+    }
+
+    return nonce;
+  }
+
+  mine(minerId) {
+    if (!this.validatePendingTransactions()) {
+      console.error("Invalid transactions detected. Aborting mining.");
+      return;
+    }
+
+    const startTime = Date.now();
+    const miner = this.participants[minerId];
+    const prevHash =
+      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
+    const merkleRoot = this.constructMerkleRoot(this.pendingTransactions);
+    const nonce = this.proofOfWork(prevHash, merkleRoot, this.difficulty);
+    this.addBlock(nonce, miner.publicKey);
+    const endTime = Date.now();
+
+    const timeTaken = (endTime - startTime) / 1000;
+    console.log(`Block mined in ${timeTaken.toFixed(3)} seconds`);
+    console.log(
+      `Average hash rate: ${(nonce / timeTaken).toFixed(2)} hashes per second`
+    );
+    console.log(`Difficulty: ${this.difficulty}`);
+  }
+
+  chainIsValid() {
+    for (let i = 0; i < this.chain.length; i++) {
+      const block = this.chain[i];
+      const merkleRoot = this.constructMerkleRoot(block.transactions);
+
+      if (i === 0 && block.hash !== this.getHash("0", merkleRoot, "0")) {
+        return false;
+      }
+      if (
+        i > 0 &&
+        block.hash !==
+          this.getHash(this.chain[i - 1].hash, merkleRoot, block.nonce)
+      ) {
+        return false;
+      }
+      if (i > 0 && block.prevHash !== this.chain[i - 1].hash) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  constructMerkleRoot(transactions) {
+    if (transactions.length === 0) {
+      return "";
+    }
+
+    let hashes = transactions.map((tx) => this.hashTransaction(tx));
+
+    while (hashes.length > 1) {
+      if (hashes.length % 2 !== 0) {
+        hashes.push(hashes[hashes.length - 1]);
+      }
+
+      const newLevel = [];
+      for (let i = 0; i < hashes.length; i += 2) {
+        newLevel.push(this.hashPair(hashes[i], hashes[i + 1]));
+      }
+      hashes = newLevel;
+    }
+
+    return hashes[0];
+  }
+
+  hashPair(left, right) {
+    return crypto
+      .createHmac("sha256", "secret")
+      .update(left + right)
+      .digest("hex");
+  }
+
+  hashTransaction(transaction) {
+    return crypto
+      .createHmac("sha256", "secret")
+      .update(transaction.tx_id)
+      .digest("hex");
   }
 }
 
-// Create a new blockchain instance and simulate transactions
-const BChain = new Blockchain();
-simulateChain(BChain, 5, 3);
-
-module.exports = Blockchain;
-
-// Uncomment these lines to run a simulation and check the blockchain's validity
-// console.dir(BChain, { depth: null });
-// console.log("******** Validity of this blockchain: ", BChain.chainIsValid());
+module.exports = { Blockchain, Participant };
