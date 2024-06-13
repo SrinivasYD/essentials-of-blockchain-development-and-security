@@ -233,21 +233,26 @@ class Blockchain {
       return "";
     }
 
-    let hashes = transactions.map((tx) => this.hashTransaction(tx));
+    const hashes = transactions.map((tx) => this.hashTransaction(tx));
 
-    while (hashes.length > 1) {
-      if (hashes.length % 2 !== 0) {
-        hashes.push(hashes[hashes.length - 1]);
-      }
+    return this.recursiveMerkleRoot(hashes);
+  }
 
-      const newLevel = [];
-      for (let i = 0; i < hashes.length; i += 2) {
-        newLevel.push(this.hashPair(hashes[i], hashes[i + 1]));
-      }
-      hashes = newLevel;
+  recursiveMerkleRoot(hashes) {
+    if (hashes.length === 1) {
+      return hashes[0];
     }
 
-    return hashes[0];
+    if (hashes.length % 2 !== 0) {
+      hashes.push(hashes[hashes.length - 1]);
+    }
+
+    const newLevel = [];
+    for (let i = 0; i < hashes.length; i += 2) {
+      newLevel.push(this.hashPair(hashes[i], hashes[i + 1]));
+    }
+
+    return this.recursiveMerkleRoot(newLevel);
   }
 
   hashPair(left, right) {
