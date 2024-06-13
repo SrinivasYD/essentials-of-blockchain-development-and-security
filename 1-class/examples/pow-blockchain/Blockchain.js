@@ -1,147 +1,273 @@
-const crypto = require('crypto');
-const uuid = require('uuid');
+const crypto = require("crypto");
+const { v4: uuidv4 } = require("uuid");
+const forge = require("node-forge");
+
+// Function to generate key pairs
+function generateKeyPair() {
+  return forge.pki.rsa.generateKeyPair(2048);
+}
+
+// Class to represent a participant with a key pair
+class Participant {
+  constructor(id) {
+    this.id = id;
+    const { publicKey, privateKey } = generateKeyPair();
+    this.publicKey = forge.pki.publicKeyToPem(publicKey);
+    this.privateKey = privateKey;
+  }
+
+  sign(data) {
+    const md = forge.md.sha256.create();
+    md.update(data, "utf8");
+    return forge.util.encode64(this.privateKey.sign(md));
+  }
+
+  verify(signature, data) {
+    const publicKey = forge.pki.publicKeyFromPem(this.publicKey);
+    const md = forge.md.sha256.create();
+    md.update(data, "utf8");
+    return publicKey.verify(
+      md.digest().bytes(),
+      forge.util.decode64(signature)
+    );
+  }
+}
 
 /**
- * Block represents a block in the blockchain. It has the
- * following params:
- * @index represents its position in the blockchain
- * @timestamp shows when it was created
- * @transactions represents the data about transactions
- * added to the chain
- * @hash represents the hash of the previous block
+ * Represents a block in the blockchain.
+ * @class Block
  */
 class Block {
-    constructor(index, transactions, prevHash, nonce, hash) {
-        this.index = index;
-        this.timestamp = Math.floor(Date.now() / 1000);
-        this.transactions = transactions;
-        this.prevHash = prevHash;
-        this.hash = hash;
-        this.nonce = nonce;
-    }
+  constructor(
+    index,
+    transactions,
+    prevHash,
+    nonce,
+    hash,
+    merkleRoot,
+    difficulty,
+    minerPublicKey
+  ) {
+    this.index = index;
+    this.timestamp = Math.floor(Date.now() / 1000);
+    this.transactions = transactions;
+    this.prevHash = prevHash;
+    this.hash = hash;
+    this.nonce = nonce;
+    this.merkleRoot = merkleRoot;
+    this.difficulty = difficulty;
+    this.minerPublicKey = minerPublicKey;
+  }
 }
 
 /**
- * A blockchain transaction. Has an amount, sender and a
- * recipient (not UTXO).
+ * Represents a transaction in the blockchain.
+ * @class Transaction
  */
 class Transaction {
-    constructor(amount, sender, recipient) {
-        this.amount = amount;
-        this.sender = sender;
-        this.recipient = recipient;
-        this.tx_id = uuid().split('-').join();
-    }
+  constructor(amount, sender, recipient, senderSignature, senderPublicKey) {
+    this.amount = amount;
+    this.sender = sender;
+    this.recipient = recipient;
+    this.tx_id = uuidv4().replace(/-/g, "");
+    this.senderSignature = senderSignature;
+    this.senderPublicKey = senderPublicKey;
+  }
 }
 
 /**
- * Blockchain represents the entire blockchain with the
- * ability to create transactions, mine and validate
- * all blocks.
+ * Represents the entire blockchain.
+ * @class Blockchain
  */
 class Blockchain {
-    constructor() {
-        this.chain = [];
-        this.pendingTransactions = [];
-        this.addBlock('0');
+  constructor() {
+    this.chain = [];
+    this.pendingTransactions = [];
+    this.participants = {};
+    this.difficulty = 3; // Initial difficulty level
+    this.addBlock("0", "genesis");
+  }
+
+  addParticipant(participant) {
+    this.participants[participant.id] = participant;
+  }
+
+  createTransaction(amount, senderId, recipientId) {
+    const sender = this.participants[senderId];
+    if (!sender) {
+      throw new Error("Sender does not exist");
     }
 
-    /**
-     * Creates a transaction on the blockchain
-     */
-    createTransaction(amount, sender, recipient) {
-        this.pendingTransactions.push(new Transaction(amount, sender, recipient));
+    const transaction = new Transaction(
+      amount,
+      senderId,
+      recipientId,
+      sender.sign(amount + senderId + recipientId),
+      sender.publicKey
+    );
+    if (!this.validateTransaction(transaction)) {
+      throw new TypeError(
+        "Invalid transaction: Transaction must have a valid tx_id and signature"
+      );
+    }
+    this.pendingTransactions.push(transaction);
+  }
+
+  validateTransaction(transaction) {
+    if (!transaction || typeof transaction.tx_id !== "string") {
+      return false;
+    }
+    const sender = this.participants[transaction.sender];
+    if (!sender) {
+      return false;
+    }
+    return sender.verify(
+      transaction.senderSignature,
+      transaction.amount + transaction.sender + transaction.recipient
+    );
+  }
+
+  validatePendingTransactions() {
+    for (const transaction of this.pendingTransactions) {
+      if (!this.validateTransaction(transaction)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  addBlock(nonce, minerPublicKey) {
+    const index = this.chain.length;
+    const prevHash =
+      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
+    const merkleRoot = this.constructMerkleRoot(this.pendingTransactions);
+    const hash = this.getHash(prevHash, merkleRoot, nonce);
+    const block = new Block(
+      index,
+      this.pendingTransactions,
+      prevHash,
+      nonce,
+      hash,
+      merkleRoot,
+      this.difficulty,
+      minerPublicKey
+    );
+
+    this.pendingTransactions = [];
+    this.chain.push(block);
+
+    this.adjustDifficulty();
+  }
+
+  adjustDifficulty() {
+    if (this.chain.length % 10 === 0) {
+      this.difficulty++;
+    }
+  }
+
+  getHash(prevHash, merkleRoot, nonce) {
+    const encrypt = prevHash + merkleRoot + nonce;
+    return crypto.createHmac("sha256", "secret").update(encrypt).digest("hex");
+  }
+
+  proofOfWork(prevHash, merkleRoot, difficulty) {
+    let nonce = 0;
+    let hash = this.getHash(prevHash, merkleRoot, nonce);
+    const target = "0".repeat(difficulty);
+
+    while (!hash.startsWith(target)) {
+      nonce++;
+      hash = this.getHash(prevHash, merkleRoot, nonce);
     }
 
-    /**
-     * Add a block to the blockchain
-     */
-    addBlock(nonce) {
-        let index = this.chain.length;
-        let prevHash = this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : '0';
-        let hash = this.getHash(prevHash, this.pendingTransactions, nonce);
-        let block = new Block(index, this.pendingTransactions, prevHash, nonce, hash);
+    return nonce;
+  }
 
-        // reset pending txs
-        this.pendingTransactions = [];
-        this.chain.push(block);
+  mine(minerId) {
+    if (!this.validatePendingTransactions()) {
+      console.error("Invalid transactions detected. Aborting mining.");
+      return;
     }
 
-    /**
-     * Gets the hash of a block.
-     */
-    getHash(prevHash, txs, nonce) {
-        var encrypt = prevHash + nonce;
-        txs.forEach((tx) => { encrypt += tx.tx_id; });
-        var hash=crypto.createHmac('sha256', "secret")
-            .update(encrypt)
-            .digest('hex');
-        return hash;
+    const startTime = Date.now();
+    const miner = this.participants[minerId];
+    const prevHash =
+      this.chain.length !== 0 ? this.chain[this.chain.length - 1].hash : "0";
+    const merkleRoot = this.constructMerkleRoot(this.pendingTransactions);
+    const nonce = this.proofOfWork(prevHash, merkleRoot, this.difficulty);
+    this.addBlock(nonce, miner.publicKey);
+    const endTime = Date.now();
+
+    const timeTaken = (endTime - startTime) / 1000;
+    console.log(`Block mined in ${timeTaken.toFixed(3)} seconds`);
+    console.log(
+      `Average hash rate: ${(nonce / timeTaken).toFixed(2)} hashes per second`
+    );
+    console.log(`Difficulty: ${this.difficulty}`);
+  }
+
+  chainIsValid() {
+    for (let i = 0; i < this.chain.length; i++) {
+      const block = this.chain[i];
+      const merkleRoot = this.constructMerkleRoot(block.transactions);
+
+      if (i === 0 && block.hash !== this.getHash("0", merkleRoot, "0")) {
+        return false;
+      }
+      if (
+        i > 0 &&
+        block.hash !==
+          this.getHash(this.chain[i - 1].hash, merkleRoot, block.nonce)
+      ) {
+        return false;
+      }
+      if (i > 0 && block.prevHash !== this.chain[i - 1].hash) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  constructMerkleRoot(transactions) {
+    if (transactions.length === 0) {
+      return "";
     }
 
-    /**
-     * Find nonce that satisfies our proof of work.
-     */
-    proofOfWork() {
-        //TODO
+    const hashes = transactions.map((tx) => this.hashTransaction(tx));
+
+    return this.recursiveMerkleRoot(hashes);
+  }
+
+  recursiveMerkleRoot(hashes) {
+    if (hashes.length === 1) {
+      return hashes[0];
     }
 
-    /**
-     * Mine a block and add it to the chain.
-     */
-    mine() {
-        let tx_id_list = [];
-        this.pendingTransactions.forEach((tx) => tx_id_list.push(tx.tx_id));
-        let nonce = this.proofOfWork();
-        this.addBlock('0');
+    if (hashes.length % 2 !== 0) {
+      hashes.push(hashes[hashes.length - 1]);
     }
 
-
-    /**
-     * Check if the chain is valid by going through all blocks and comparing their stored
-     * hash with the computed hash.
-     */
-    chainIsValid(){
-        for(var i=0;i<this.chain.length;i++){
-            let tx_id_list = [];
-            this.chain[i].transactions.forEach((tx) => tx_id_list.push(tx.tx_id));
-
-            if(i == 0 && this.chain[i].hash !==this.getHash('0',[],'0')){
-                return false;
-            }
-            if(i > 0 && this.chain[i].hash !== this.getHash(this.chain[i-1].hash, this.chain[i].transactions, '0')){
-                return false;
-            }
-            if(i > 0 && this.chain[i].prevHash !== this.chain[i-1].hash){
-                return false;
-            }
-        }
-        return true;
+    const newLevel = [];
+    for (let i = 0; i < hashes.length; i += 2) {
+      newLevel.push(this.hashPair(hashes[i], hashes[i + 1]));
     }
+
+    return this.recursiveMerkleRoot(newLevel);
+  }
+
+  hashPair(left, right) {
+    return crypto
+      .createHmac("sha256", "secret")
+      .update(left + right)
+      .digest("hex");
+  }
+
+  hashTransaction(transaction) {
+    return crypto
+      .createHmac("sha256", "secret")
+      .update(transaction.tx_id)
+      .digest("hex");
+  }
 }
 
-function constructMerkleTree(inputs) {
-    //TODO
-}
-
-function simulateChain(blockchain, numTxs, numBlocks) {
-    for(let i = 0; i < numBlocks; i++) {
-        let numTxsRand = Math.floor(Math.random() * Math.floor(numTxs));
-        for(let j = 0; j < numTxsRand; j++) {
-            let sender = uuid().substr(0,5);
-            let receiver = uuid().substr(0,5);
-            blockchain.createTransaction(sender, receiver,
-                                         Math.floor(Math.random() * Math.floor(1000)));
-        }
-        blockchain.mine();
-    }
-}
-
-const BChain = new Blockchain();
-simulateChain(BChain, 5, 3);
-
-module.exports = Blockchain;
-
-// uncomment these to run a simulation
-// console.dir(BChain,{depth:null});
-// console.log("******** Validity of this blockchain: ", BChain.chainIsValid());
+module.exports = { Blockchain, Participant };
